@@ -111,7 +111,7 @@ class RenownBot extends DiscordBot
 				if(isMention)
 				{
 					let userId = isMention[1],
-						memberNumber = this.userMap[message.guild.id][userId];
+						memberNumber = this.userMap[message.guild.id]?this.userMap[message.guild.id][userId]:null;
 					if(memberNumber)
 					{
 						let renowns = this.renowns[message.guild.id][memberNumber];
