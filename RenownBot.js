@@ -46,7 +46,7 @@ class RenownBot extends DiscordBot
 			for(let line of lines)
 			{
 				let [number, cunning, glory, honor, purity, wisdom] =line.trim().split(',');
-				this.renowns[serverId][number] = {Cunning:cunning,Glory:glory, Honor:honor, Wisdom:wisdom,Purity:purity};
+				this.renowns[serverId][number] = {Cunning:cunning,Glory:glory, Honor:honor,Purity:purity, Wisdom:wisdom};
 			}
 		}).catch((err)=>{
 			console.warn(err);
