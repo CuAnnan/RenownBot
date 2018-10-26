@@ -111,7 +111,7 @@ class DiscordBot
 		});
 	}
 	
-	getDeleteMessageForGuild(guildId)
+	async getDeleteMessageForGuild(guildId)
 	{
 		if(Object.keys(this.deleteMessageOverrides).indexOf(guildId) < 0)
 		{
@@ -120,7 +120,7 @@ class DiscordBot
 		return this.deleteMessageOverrides[guildId];
 	}
 	
-	setDeleteMessages(commandParts, message, comment)
+	async setDeleteMessages(commandParts, message, comment)
 	{
 		this.elevateCommand(message);
 		if(!commandParts.length)
@@ -142,7 +142,7 @@ class DiscordBot
 		return this.commandPrefix;
 	}
 	
-	setCommandPrefixForGuild(commandParts, message, comment)
+	async setCommandPrefixForGuild(commandParts, message, comment)
 	{
 		this.elevateCommand(message);
 		
@@ -167,7 +167,7 @@ class DiscordBot
 		this.saveSettings();
 	}
 	
-	showAuthorised(commandParts, message)
+	async showAuthorised(commandParts, message)
 	{
 		for(let memberId of this.authorisedUsers[message.guild.id])
 		{
@@ -175,7 +175,7 @@ class DiscordBot
 		}
 	}
 	
-	authoriseRole(commandParts, message)
+	async authoriseRole(commandParts, message)
 	{
 		this.elevateCommand(message);
 		if(!commandParts.length)
@@ -203,7 +203,7 @@ class DiscordBot
 		}
 	}
 	
-	deauthoriseRole(commandParts, message)
+	async deauthoriseRole(commandParts, message)
 	{
 		this.elevateCommand(message);
 		if(!commandParts.length)
@@ -228,7 +228,7 @@ class DiscordBot
 		}
 	}
 	
-	authoriseUser(commandParts, message)
+	async authoriseUser(commandParts, message)
 	{
 		this.elevateCommand(message);
 		
@@ -256,7 +256,7 @@ class DiscordBot
 		}
 	}
 	
-	deauthoriseUser(commandParts, message)
+	async deauthoriseUser(commandParts, message)
 	{
 		this.elevateCommand(message);
 		if(!commandParts.length)
@@ -339,7 +339,6 @@ class DiscordBot
 			return;
 		}
 		
-		
 		if (message.channel.type == 'dm')
 		{
 			message.channel.send("You cannot use this bot via DM yet for technical reasons");
@@ -362,8 +361,6 @@ class DiscordBot
 		let comment = args[1] ? args[1].trim() : '',
 			commandParts = args[0].split(' '),
 			command = commandParts.shift().toLowerCase();
-		
-		
 		this.executeCommand(command, commandParts, message, comment);
 	}
 	
@@ -371,22 +368,16 @@ class DiscordBot
 	{
 		if (this.commands[command])
 		{
-			try
-			{
-				this.commands[command](commandParts, message, comment);
-			}
-			catch(e)
-			{
-				message.reply(e.message);
-				console.warn(e);
-			}
-			
-			if(this.getDeleteMessageForGuild(message.guild.id))
-			{
-				message.delete().catch(() => {
-					console.log('Bot is not permitted to delete on this guild');
-				});
-			}
+			this.commands[command](commandParts, message, comment).then(()=>{
+				if(this.getDeleteMessageForGuild(message.guild.id))
+				{
+					message.delete().catch(() => {
+						console.log('Bot is not permitted to delete on this guild');
+					});
+				}
+			}).catch((error)=>{
+				console.warn(error);
+			});
 		}
 	}
 	

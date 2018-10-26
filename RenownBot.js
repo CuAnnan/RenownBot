@@ -6,7 +6,6 @@ class RenownBot extends DiscordBot
 	constructor()
 	{
 		super();
-		this.fileLocations = {};
 		this.renowns = {};
 		this.userMap = {};
 	}
@@ -14,9 +13,14 @@ class RenownBot extends DiscordBot
 	attachCommands()
 	{
 		super.attachCommands();
-		this.attachCommand('setFileLocation', this.setFileLocation);
+		this.attachCommand('readLocalFile', this.readLocalFile);
+		this.attachCommand('readRemoteFile', this.readRemoteFile);
 		this.attachCommand('register', this.register);
 		this.attachCommand('renownCheck', this.renownCheck);
+		this.attachCommand('deleteRenown', this.deleteRenown);
+		this.addCommandAliases({
+			'renownCheck':['checkRenown', 'check', 'renown']
+		});
 	}
 	
 	async hoist(client)
@@ -31,8 +35,8 @@ class RenownBot extends DiscordBot
 	getSettingsToSave()
 	{
 		let settingsToSave = super.getSettingsToSave();
-		settingsToSave.fileLocations = this.fileLocations;
 		settingsToSave.userMap = this.userMap;
+		settingsToSave.renowns = this.renowns;
 		return settingsToSave;
 	}
 	
@@ -53,32 +57,62 @@ class RenownBot extends DiscordBot
 		});
 	}
 	
-	setFileLocation(messageParts, message)
+	async deleteRenown(messageParts, message)
+	{
+		this.elevateCommand(message);
+		if(this.renowns[message.guild.id])
+		{
+			for(let membershipNumber of messageParts)
+			{
+				if(this.renowns[message.guild.id][membershipNumber])
+				{
+					delete this.renowns[message.guild.id][membershipNumber];
+				}
+			}
+		}
+	}
+	
+	async readRemoteFile(messageParts, message)
 	{
 		this.elevateCommand(message);
 		let URL = messageParts[0].trim();
-		this.fileLocations[message.guild.id] = URL;
-		this.loadServerRenownFromCSV(message.guild.id, URL);
+		this.loadServerRenownFromCSV(message.guild.id, URL).then(()=>{
+			message.reply('Renown loaded');
+		});
 	}
 	
-	register(messageParts, message)
+	async readLocalFile(messageParts, message)
+	{
+		this.elevateCommand(message);
+		let callbacks = [];
+		message.attachments.forEach(async (file)=>{
+			callbacks.push(
+				await this.loadServerRenownFromCSV(message.guild.id, file.url)
+			);
+		});
+		return Promise.all(callbacks).then(()=>{
+			message.reply('Renowns loaded');
+		});
+	}
+	
+	async register(messageParts, message)
 	{
 		this.userMap[message.guild.id] = this.userMap[message.guild.id]?this.userMap[message.guild.id]:{};
 		this.userMap[message.guild.id][message.author.id] = messageParts[0].trim();
 	}
 	
-	renownCheck(messageParts, message)
+	async renownCheck(messageParts, message)
 	{
-		for(let username of messageParts)
+		if(this.renowns[message.guild.id])
 		{
-			let isMention =username.match(/\<@\!?(\d+)\>/);
-			if(isMention)
+			for(let username of messageParts)
 			{
-				let userId = isMention[1],
-					memberNumber = this.userMap[message.guild.id][userId];
-				if(this.renowns[message.guild.id])
+				let isMention =username.match(/\<@\!?(\d+)\>/);
+				if(isMention)
 				{
-					if (memberNumber)
+					let userId = isMention[1],
+						memberNumber = this.userMap[message.guild.id][userId];
+					if(memberNumber)
 					{
 						let renowns = this.renowns[message.guild.id][memberNumber];
 						if (renowns)
@@ -105,11 +139,11 @@ class RenownBot extends DiscordBot
 						message.reply(`That user has not registered their membership number on this server.`);
 					}
 				}
-				else
-				{
-					message.reply('I have not been configured to run on this server');
-				}
 			}
+		}
+		else
+		{
+			message.reply('I have not been configured to run on this server');
 		}
 	}
 }
