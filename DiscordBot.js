@@ -102,16 +102,19 @@ class DiscordBot
 		this.attachCommand('showAuthorised', this.showAuthorised);
 		this.attachCommand('deauthoriseUsers', this.deauthoriseUser);
 		this.attachCommand('deauthoriseRole', this.deauthoriseRole);
+		this.attachCommand('authoriseChannels', this.authoriseChannels);
+		this.attachCommand('authoriseCategories', this.authoriseCategories);
+		this.attachCommand('deauthoriseChannels', this.deauthoriseChannels);
+		this.attachCommand('deauthoriseCategories', this.deauthoriseCategories);
 		this.addCommandAliases({
 			'authoriseUsers':['authoriseUser', 'authUser', 'authUsers'],
 			'authoriseRole':['authRole'],
 			'deauthoriseUsers':['deauthoriseUser', 'deauthUser', 'deauthUsers'],
-			'deauthoriseRole':['deauthRole'],
-			'showAuthorised':['showAuth', 'showAuths'],
+			'deauthoriseRole':['deauthRole']
 		});
 	}
 	
-	async getDeleteMessageForGuild(guildId)
+	getDeleteMessageForGuild(guildId)
 	{
 		if(Object.keys(this.deleteMessageOverrides).indexOf(guildId) < 0)
 		{
@@ -287,7 +290,7 @@ class DiscordBot
 				'commandPrefixOverrides': this.commandPrefixOverrides,
 				'deleteMessages':this.deleteMessageOverrides,
 				'authorisedUsers':this.authorisedUsers,
-				'authorisedRoles':this.authorisedRoles,
+				'authorisedRoles':this.authorisedRoles
 			};
 		return settingsToSave;
 	}

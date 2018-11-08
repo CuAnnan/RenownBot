@@ -5,7 +5,7 @@ const Bot = require('./RenownBot.js');
 const bot = new Bot();
 
 client.login(conf.clientToken);
-client.on(
+client.once(
 	'ready',
 	function()
 	{

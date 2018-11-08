@@ -1,7 +1,13 @@
 #Usage:
 The bot responds to messages starting with @mentions to it, or with the command prefix assigned to it for the server.
 
-##Commands:
+##Installing the bot on your own server
+Clone the repo and run npm install and then npm run or pm2 the app to run. The bot requires a settings.json file that is an empty json object, because I haven't written it to check yet, and a conf.js that exports an object with a clientToken property that matches your bot's user's client Token
+
+##I didn't understand any of that
+Never fear. I have the bot running on my own server. If your usage of it causes me problems, I'll kick your bot usage, but until then just follow [This link](https://discordapp.com/api/oauth2/authorize?client_id=505403199377899520&permissions=75776&scope=bot). The bot uses the manage messages permission to delete messages that are commands to it. It does not require this functionality to work. The other two functionalities are mandatory. 
+
+##Bot Commands:
 `setCommandPrefix [prefix]`  
 This will set the command prefix for the server to the prefix supplied. It defaults to !, but ! is the standard prefix used so to prevent conflicts you can always @mention the bot  
 For example `@RenownBot setCommandPrefix !`  
