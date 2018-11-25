@@ -2,118 +2,103 @@
 let conf = require('./conf.js'),
 	fs = require('fs');
 
-class DiscordBot
-{
-	constructor()
+class DiscordBot {
+    constructor() {
+        this.commands = {};
+        this.commandPrefix = conf.commandPrefix;
+        this.commandPrefixOverrides = {};
+        this.deleteMessageOverrides = {};
+        this.authorisedRoles = {};
+        this.authorisedUsers = {};
+        this.attachCommands();
+    }
+
+    async hoist(client) {
+        this.client = client;
+        this.user = client.user;
+        let settings = this.getJSONFromFile('./settings.json'),
+            settingsToHoist = this.getSettingsToSave();
+        for (let setting in settingsToHoist) {
+            this[setting] = settings[setting] ? settings[setting] : {}
+        }
+
+        return settings;
+    }
+
+    listen() {
+        this.client.on('message', (message) => {
+            try {
+                if (message.author.bot) {
+                    return;
+                }
+                this.processCommand(message);
+            } catch (e) {
+                console.warn(e);
+            }
+        });
+        this.client.on('guildMemberRemove', (member) => {
+            let index = this.authorisedUsers[member.guild.id].indexOf(member.user.id);
+            if (index >= 0) {
+                this.authorisedUsers[member.guild.id].splice(index, 1);
+            }
+        });
+    }
+
+    getJSONFromFile(path) {
+        let text = fs.readFileSync(path),
+            json = JSON.parse(text);
+        return json;
+    }
+
+    shutdown() {
+        this.saveSettings();
+    }
+
+    elevateCommand(message) {
+        let member = message.member,
+            authorAuthedRoles = [];
+        if (this.authorisedRoles[message.guild.id]) {
+            authorAuthedRoles = member.roles.filterArray((role) => this.authorisedRoles[message.guild.id].indexOf(role.id) !== -1);
+        }
+
+        if (message.guild.owner.id === message.author.id || this.authorisedUsers[message.guild.id].indexOf(message.author.id) > -1 || authorAuthedRoles.length > 0) {
+            return;
+        }
+        throw new Error('This action is only allowable by the server owner or by authorised users or users with an authorised role');
+    }
+
+    attachCommand(command, callback, rescope = true) {
+        if (rescope) {
+            callback = callback.bind(this);
+        }
+
+
+        this.commands[command.toLowerCase()] = callback;
+    }
+
+    attachCommands() {
+        this.attachCommand('setCommandPrefix', this.setCommandPrefixForGuild);
+        this.attachCommand('setCommandDelete', this.setDeleteMessages);
+        this.attachCommand('getCommandPrefix', this.replyWithPrefixForGuild);
+        this.attachCommand('authoriseUsers', this.authoriseUser);
+        this.attachCommand('authoriseRole', this.authoriseRole);
+        this.attachCommand('showAuthorised', this.showAuthorised);
+        this.attachCommand('deauthoriseUsers', this.deauthoriseUser);
+        this.attachCommand('deauthoriseRole', this.deauthoriseRole);
+        this.attachCommand('help', this.showHelpText);
+        this.addCommandAliases({
+            'authoriseUsers': ['authoriseUser', 'authUser', 'authUsers'],
+            'authoriseRole': ['authRole'],
+            'deauthoriseUsers': ['deauthoriseUser', 'deauthUser', 'deauthUsers'],
+            'deauthoriseRole': ['deauthRole']
+        });
+    }
+
+    replyWithPrefixForGuild(commandParts, message)
 	{
-		this.commands = {};
-		this.commandPrefix = conf.commandPrefix;
-		this.commandPrefixOverrides = {};
-		this.deleteMessageOverrides = {};
-		this.authorisedRoles = {};
-		this.authorisedUsers = {};
-		this.attachCommands();
+		return message.reply(`The commandPrefix for this server is ${this.getCommandPrefixForGuild(message.guild.id)}`);
 	}
-	
-	async hoist(client)
-	{
-		this.client = client;
-		this.user = client.user;
-		let settings = this.getJSONFromFile('./settings.json'),
-			settingsToHoist = this.getSettingsToSave();
-		for(let setting in settingsToHoist)
-		{
-			this[setting] = settings[setting]?settings[setting]:{}
-		}
-		
-		return settings;
-	}
-	
-	listen()
-	{
-		this.client.on('message',(message)=>{
-			try
-			{
-				if (message.author.bot)
-				{
-					return;
-				}
-				this.processCommand(message);
-			}
-			catch(e)
-			{
-				console.warn(e);
-			}
-		});
-		this.client.on('guildMemberRemove',(member)=>{
-			let index = this.authorisedUsers[member.guild.id].indexOf(member.user.id);
-			if(index >= 0)
-			{
-				this.authorisedUsers[member.guild.id].splice(index, 1);
-			}
-		});
-	}
-	
-	getJSONFromFile(path)
-	{
-		let text = fs.readFileSync(path),
-			json = JSON.parse(text);
-		return json;
-	}
-	
-	shutdown()
-	{
-		this.saveSettings();
-	}
-	
-	elevateCommand(message)
-	{
-		let member = message.member,
-			authorAuthedRoles = [];
-		if(this.authorisedRoles[message.guild.id])
-		{
-			authorAuthedRoles = member.roles.filterArray((role)=>this.authorisedRoles[message.guild.id].indexOf(role.id) !== -1);
-		}
-		
-		if(message.guild.owner.id === message.author.id || this.authorisedUsers[message.guild.id].indexOf(message.author.id) > -1 || authorAuthedRoles.length > 0)
-		{
-			return;
-		}
-		throw new Error('This action is only allowable by the server owner or by authorised users or users with an authorised role');
-	}
-	
-	attachCommand(command, callback, rescope = true)
-	{
-		if(rescope)
-		{
-			callback = callback.bind(this);
-		}
-		
-		
-		this.commands[command.toLowerCase()] = callback;
-	}
-	
-	attachCommands()
-	{
-		this.attachCommand('setCommandPrefix', this.setCommandPrefixForGuild);
-		this.attachCommand('setCommandDelete', this.setDeleteMessages);
-		this.attachCommand('authoriseUsers', this.authoriseUser);
-		this.attachCommand('authoriseRole', this.authoriseRole);
-		this.attachCommand('showAuthorised', this.showAuthorised);
-		this.attachCommand('deauthoriseUsers', this.deauthoriseUser);
-		this.attachCommand('deauthoriseRole', this.deauthoriseRole);
-		this.attachCommand('authoriseChannels', this.authoriseChannels);
-		this.attachCommand('authoriseCategories', this.authoriseCategories);
-		this.attachCommand('deauthoriseChannels', this.deauthoriseChannels);
-		this.attachCommand('deauthoriseCategories', this.deauthoriseCategories);
-		this.addCommandAliases({
-			'authoriseUsers':['authoriseUser', 'authUser', 'authUsers'],
-			'authoriseRole':['authRole'],
-			'deauthoriseUsers':['deauthoriseUser', 'deauthUser', 'deauthUsers'],
-			'deauthoriseRole':['deauthRole']
-		});
-	}
-	
+
 	getDeleteMessageForGuild(guildId)
 	{
 		if(Object.keys(this.deleteMessageOverrides).indexOf(guildId) < 0)
@@ -282,6 +267,18 @@ class DiscordBot
 		{
 			message.reply(`The following members didn't have permissions already: ${notAuthedUsers.join(', ')}`);
 		}
+	}
+
+	async getHelpText(guildId)
+	{
+		return ['Help text has not been defined for this bot'];
+	}
+
+	async showHelpText(commandParts, message)
+	{
+		return message.channel.send(
+			await this.getHelpText(message.guild.id)
+		);
 	}
 	
 	getSettingsToSave()

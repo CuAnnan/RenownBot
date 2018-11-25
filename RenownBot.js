@@ -31,6 +31,18 @@ class RenownBot extends DiscordBot
 			await this.loadServerRenownFromCSV(serverId, this.fileLocations[serverId]);
 		}
 	}
+
+	async getHelpText(guildId)
+	{
+		let prefix = this.getCommandPrefixForGuild(guildId);
+
+		return [
+			`This bot responds to messages starting with either ${prefix} or direct @DiscordBot mentions`,
+			`To populate the bot with the renown details of player characters, a properly formatted CSV file is required. You can drag it onto any chat the bot is registered to and give it the command ${prefix}loadLocalFile. This will cause the details to be read and stored.`,
+			`The renown details are stored by player membership number and character name. As such, a player must register with the bot using the ${prefix}register [membership number] command.`,
+			`For example, if your membership number is 2018050005, you would register with the bot via \`${prefix}register 2018050005\``,
+		];
+	}
 	
 	getSettingsToSave()
 	{
@@ -42,17 +54,22 @@ class RenownBot extends DiscordBot
 	
 	async loadServerRenownFromCSV(serverId, csvURL)
 	{
-		await request.get(csvURL).then((csv)=>{
-			this.renowns[serverId] = this.renowns[serverId]?this.renowns[serverId]:{};
-			let lines = csv.split('\n');
-			// we don't care about the titles
-			lines.shift();
-			for(let line of lines)
-			{
-				let [number, cunning, glory, honor, purity, wisdom] =line.trim().split(',');
-				this.renowns[serverId][number] = {Cunning:cunning,Glory:glory, Honor:honor,Purity:purity, Wisdom:wisdom};
-			}
-		}).catch((err)=>{
+		return request.get(csvURL).then((csv)=> {
+            this.renowns[serverId] = this.renowns[serverId] ? this.renowns[serverId] : {};
+            let lines = csv.split('\n');
+            // we don't care about the titles
+            lines.shift();
+            for (let line of lines) {
+                let [number, name, cunning, glory, honor, purity, wisdom] = line.trim().split(',');
+                this.renowns[serverId][number] = {
+                    Cunning: cunning,
+                    Glory: glory,
+                    Honor: honor,
+                    Purity: purity,
+                    Wisdom: wisdom
+                };
+            }
+        }).catch((err)=>{
 			console.warn(err);
 		});
 	}
@@ -87,7 +104,7 @@ class RenownBot extends DiscordBot
 		let callbacks = [];
 		message.attachments.forEach(async (file)=>{
 			callbacks.push(
-				await this.loadServerRenownFromCSV(message.guild.id, file.url)
+				this.loadServerRenownFromCSV(message.guild.id, file.url)
 			);
 		});
 		return Promise.all(callbacks).then(()=>{
